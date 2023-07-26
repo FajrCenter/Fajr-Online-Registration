@@ -209,7 +209,14 @@ function EmailValidator(email){
 
 function PasswordValidator(password){
 
-    const passwordRegex = /^(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{6,16}$/;
+    const passwordRegex = /^(?=.*[0-9])(?=.*[!@#$%^&*_])[a-zA-Z0-9!@#$%^&*_]{6,16}$/;
+
+    const hashCheck = /#/;
+
+    if(hashCheck.test(password)){
+        passwordAlert.innerText = "Invalid Password, Password mustn't Contain \"#\" Character.";
+        return false;
+    }
 
     if(!passwordRegex.test(password)){
         passwordAlert.innerText = "Invalid Password, Password must Contain One Capital Letter, Special Letter, and don't be Less than 6 Characters.";

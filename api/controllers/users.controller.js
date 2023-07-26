@@ -1,4 +1,5 @@
 import axios from "axios";
+import bcrypt from "bcrypt";
 
 /* Create Users Controller */
 
@@ -371,7 +372,7 @@ async function GetCourseGroupsHandler(data){
             data: null,
             message: "Faild to Create and Enrol User.", 
         }
-        console.log(res.data[gender]);
+
         return await SetUserGroup({
             groupID: res.data[gender].id,
             userID,
