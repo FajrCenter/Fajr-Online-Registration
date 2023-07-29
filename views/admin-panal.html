@@ -5,20 +5,38 @@
         <link rel="stylesheet" href="/css/main.css" />
     </head>
     <body>
-        <div style="width: 300px;" class="enrollment">
+        <div style="width: 500px; margin: 100px auto;" class="enrollment">
             <div class="container">
                 <form>
                     <div id="selectors" class="selectors">
-                        <select id="courses"></select>
+                        <select id="courses">
+                            <option value="" selected disabled hidden>Choose Course</option>
+                        </select>
+
+                        <select id="groups">
+                            <option value="" selected disabled hidden>Choose Group</option>
+                            <option value="" disabled>--Empty--</option>
+                        </select>
                     </div>
-                    <div id="main-alert">
+                    <div id="main-alert" class="main-alert-faild">
                         <p>kdkgdgdsgdsgsgdsg</p>
                     </div>
                     <div class="input">
                         <label>User E-Mail</label>
-                        <input id="username" type="text" placeholder="Enter Username" />
+                        <input id="email" type="text" placeholder="Enter User E-Mail" />
                     </div>
-                    <button id="submit-btn" class="normal-btn" type="button">Submit</button>
+
+                    <div class="radio-input">
+                        <div class="input">
+                            <label for="student">Student</label>
+                            <input id="student" name="job" type="radio" value=5 checked />
+                        </div>
+                        <div class="input">
+                            <label for="teacher">Teacher</label>
+                            <input id="teacher" name="job" type="radio" value=3 />  
+                        </div>
+                    </div>
+                    <button id="submit-btn" class="normal-btn" type="button" disabled>Submit</button>
                 </form>
             </div>
         </div>

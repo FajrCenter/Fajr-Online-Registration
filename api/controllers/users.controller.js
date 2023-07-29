@@ -7,16 +7,28 @@ export async function CreateUser(req, res){
 
     try
     {
-        const { username, firstName, lastName, email, password } = req.body;
+        const { username, firstName, lastName, email, password, gender } = req.body;
 
-        let { gender } = req.body;
+        const user_name = await GetUser("username", username);
 
-        gender = Number(gender);
-        
-        const user = await CheckUserHandler(email);
+        if(user_name){
+            res.status(409).send({
+                success: false,
+                data: null,
+                message: "Faild to Create Account, Username is Already Exists.",
+            });
     
-        if(!user.success){
-            res.status(user.status).send(user);
+            return;
+        }
+
+        const user_mail = await GetUser("email", email);
+    
+        if(user_mail){
+            res.status(409).send({
+                success: false,
+                data: null,
+                message: "Faild to Create Account, E-Mail is Already Exists.",
+            });
     
             return;
         }
@@ -30,7 +42,7 @@ export async function CreateUser(req, res){
         });
     
         if(!response2.data || response2.data.exception){
-            res.status(404).send({
+            res.status(400).send({
                 success: false,
                 data: null,
                 message: "Invalid Data.",
@@ -64,6 +76,52 @@ export async function CreateUser(req, res){
 }
 
 /* ------------------------------ */
+
+export async function GetCourses(req, res){
+
+    let url = `${process.env.END_POINT}/webservice/rest/server.php?wstoken=${process.env.TOKEN}&wsfunction=core_course_get_courses&moodlewsrestformat=json`;
+
+    for(let i = 2; i <= 100; i++){
+
+        if(i === 68 || i === 82 || i === 97) continue;
+        url += `&options[ids][${i - 2}]=${i}`;
+    }
+
+    const courses = await axios.get(url, {
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+        }
+    });
+
+    if(!courses){
+
+        res.status(500).send({
+            success: false,
+            data: null,
+            message: "Faild to Get Courses.",
+        });
+
+        return;
+    }
+
+    if(courses.data.exception){
+        res.status(400).send({
+            success: false,
+            data: null,
+            message: `Faild to Get Courses, ${courses.data.exception.message}`,
+        });
+
+        return; 
+    }
+
+    res.status(200).send({
+        success: true,
+        data: courses.data,
+        message: "",
+    })
+}
+
+/* Get Course Groups Controller */
 
 export async function C_GetCourseGroups(req, res){
     try
@@ -129,123 +187,89 @@ export async function C_GetCourseGroups(req, res){
     }
 }
 
+/* ------------------------------ */
+
 /* Enrol Users Controller */
 
 export async function EnrolUser(req, res){
 
     try
     {
-        const { email, courseID, groupID } = req.body;
+        const { email, courseID, groupID, job } = req.body;
 
-        const response = await GetUserHandler(email);
+        const user = await GetUser("email", email);
     
-        if(!response.success){
-            res.status(response.status).send(response);
+        if(!user){
+            res.status(404).send({
+                success: false,
+                data: null,
+                message: "Faild to Enrol User, User not Found",
+            });
     
             return;
         }
     
-        const user = response.data;
-    
-        const userEnrollment = await H_EnrolUser({
-            courseID,
-            userID: user.id,
-            isStudent: true,
-            groupID,
+        const url = `${process.env.END_POINT}/webservice/rest/server.php?wstoken=${process.env.TOKEN}&wsfunction=enrol_manual_enrol_users&moodlewsrestformat=json&enrolments[0][courseid]=${courseID}&enrolments[0][roleid]=${job ? 5 : 3}&enrolments[0][userid]=${user.id}`;
+
+        const response = await axios.post(url, {
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            }
         });
-    
-        res.status(userEnrollment.status).send(userEnrollment);
+
+
+        if(!response) {
+            
+            res.status(400).send({
+                success: false,
+                data: null,
+                message: "Faild to Enrol User, Invalid Parameters."
+            });
+        }
+
+        if(!response.data){
+
+            const group = await SetUserGroup({
+                userID: user.id,
+                groupID,
+            });
+
+            if(!group.success){
+
+                res.status(404).send({
+                    success: false,
+                    data: null,
+                    message: group.message,
+                });
+
+                return;
+            }
+
+            res.status(200).send({
+                success: true,
+                data: null,
+                message: group.message,
+            });
+
+            return;
+        }
+
+        if(response.data.exception) {
+
+            res.status(400).send({
+                success: false,
+                data: null,
+                message: `Faild to Enrol User, ${response.data.message}`,
+            });
+        }
     }
     catch(error)
     {
         res.status(500).send({
             success: false,
             data: null,
-            message: "Server Error, Try Again Later." + "     " + error,
+            message: "Server Error, Try Again Later.",
         });
-    }
-}
-
-/* ------------------------------ */
-
-async function H_EnrolUser(data){
-
-    try
-    {
-        const { courseID, userID, isStudent, groupID } = data;
-
-        const enrolURL = `${process.env.END_POINT}/webservice/rest/server.php?wstoken=${process.env.TOKEN}&wsfunction=enrol_manual_enrol_users&moodlewsrestformat=json&enrolments[0][courseid]=${courseID}&enrolments[0][roleid]=${isStudent ? 5 : 3}&enrolments[0][userid]=${userID}`;
-
-        const response = await axios.post(enrolURL, {
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-            }
-        });
-
-
-        if(!response) return {
-            success: false,
-            status: 500,
-            data: null,
-            message: "Faild to Enrol User, Server Error.",
-        }
-
-        if(!response.data) return await SetUserGroup({
-                userID,
-                groupID,
-        });
-
-        if(response.data.exception) return {
-            success: false,
-            status: 400,
-            data: null,
-            message: response.data.message,
-        }
-    }
-    catch(error)
-    {
-        throw error;
-    }
-}
-
-/* Check Existing User Handler */
-
-async function CheckUserHandler(email){
-
-    try
-    {
-        const url = `${process.env.END_POINT}/webservice/rest/server.php?wstoken=${process.env.TOKEN}&wsfunction=core_user_get_users&moodlewsrestformat=json&criteria[0][key]=email&criteria[0][value]=${email}`;
-
-        const res = await axios.get(url, {
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-            }
-        });
-    
-        if(!res.data || res.data.exception) return{
-            success: false,
-            status: 403,
-            data: null,
-            message: "Invalid Data.",
-        }
-    
-        if(res.data.users.length > 0) return{
-            success: false,
-            status: 409,
-            data: null,
-            message: "Faild to create Account, User is Already Exists.",
-        }
-    
-        return{
-            success: true,
-            status: 200,
-            data: null,
-            message: "Faild to create Account, User is Already Exists.", 
-        }
-    }
-    catch(error)
-    {
-        throw error;
     }
 }
 
@@ -253,11 +277,11 @@ async function CheckUserHandler(email){
 
 /* Get User Handler */
 
-async function GetUserHandler(email){
+async function GetUser(key, value){
 
     try
     {
-        const url = `${process.env.END_POINT}/webservice/rest/server.php?wstoken=${process.env.TOKEN}&wsfunction=core_user_get_users&moodlewsrestformat=json&criteria[0][key]=email&criteria[0][value]=${email}`;
+        const url = `${process.env.END_POINT}/webservice/rest/server.php?wstoken=${process.env.TOKEN}&wsfunction=core_user_get_users&moodlewsrestformat=json&criteria[0][key]=${key}&criteria[0][value]=${value}`;
 
         const res = await axios.get(url, {
             headers: {
@@ -266,26 +290,11 @@ async function GetUserHandler(email){
         });
         
 
-        if(!res.data || res.data.exception) return{
-            success: false,
-            status: 403,
-            data: null,
-            message: "Invalid Data.",
-        }
+        if(!res.data || res.data.exception) return null;
 
-        if(res.data.users.length <= 0) return{
-            success: false,
-            status: 403,
-            data: null,
-            message: "Faild to Get User, User's not Found.",
-        }
+        if(res.data.users.length <= 0) return null;
 
-        return{
-            success: true,
-            status: 200,
-            data: res.data.users[0],
-            message: "Success.", 
-        }   
+        return res.data.users[0];
     }
     catch(error)
     {
@@ -303,9 +312,9 @@ async function EnrolUserHandler(data){
     {
         const { courseID, userID, isStudent, gender } = data;
 
-        const enrolURL = `${process.env.END_POINT}/webservice/rest/server.php?wstoken=${process.env.TOKEN}&wsfunction=enrol_manual_enrol_users&moodlewsrestformat=json&enrolments[0][courseid]=${courseID}&enrolments[0][roleid]=${isStudent ? 5 : 3}&enrolments[0][userid]=${userID}`;
+        const url = `${process.env.END_POINT}/webservice/rest/server.php?wstoken=${process.env.TOKEN}&wsfunction=enrol_manual_enrol_users&moodlewsrestformat=json&enrolments[0][courseid]=${courseID}&enrolments[0][roleid]=${isStudent ? 5 : 3}&enrolments[0][userid]=${userID}`;
 
-        const response = await axios.post(enrolURL, {
+        const response = await axios.post(url, {
             headers: {
                 "Content-Type": "application/x-www-form-urlencoded",
             }

@@ -1,30 +1,48 @@
 import { Request } from "./ajaxreq.js";
 
-const selectors = document.getElementById("selectors");
 const coursesSelector = document.getElementById("courses");
-let groupsSelector = null;
-const username = document.getElementById("username");
+const groupsSelector = document.getElementById("groups");
+const email = document.getElementById("email");
 const submitBTN = document.getElementById("submit-btn");
+
+const alert = document.getElementById("main-alert");
+
+let canSubmit = true;
 
 Init();
 
 async function Init(){
+
     const courses = await GetCourses();
+
+    if(!courses){
+
+        interactable();
+
+        return;
+    }
 
     for(let i = 0; i < courses.length; i++){
         coursesSelector.innerHTML += `<option value=${courses[i].id}>${courses[i].shortname}</option>`;
     }
+
+    interactable();
 }
 
 coursesSelector.onchange = async function(){
 
-    if(groupsSelector) groupsSelector.remove();
+    RemoveAlert();
+
+    interactable(false);
 
     const groups = await GetGroups(this.value);
 
-    if(!groups) return;
+    if(!groups){
 
-    groupsSelector = document.createElement("select");
+        interactable();
+
+        return;
+    }
 
     groupsSelector.innerHTML = "";
 
@@ -32,55 +50,53 @@ coursesSelector.onchange = async function(){
         groupsSelector.innerHTML += `<option value=${groups[i].id}>${groups[i].name}</option>`;
     }
 
-    selectors.appendChild(groupsSelector);
+    interactable();
+}
+
+groupsSelector.onchange = function(){
+    RemoveAlert();
 }
 
 submitBTN.onclick = async function(){
-    const user = await GetUser(username.value);
 
-    const res = await EnrolUser(user.id, 20, 5);
-}
+    RemoveAlert();
 
-async function GetUser(username){
+    if(!CourseValidator(coursesSelector)) return;
 
-    const url = `http://learn.fajr.com/webservice/rest/server.php?wstoken=3a4b8aba0773629cbb10ab3926ef80f0&wsfunction=core_user_get_users&moodlewsrestformat=json&criteria[0][key]=username&criteria[0][value]=${username}`
+    if(!GroupValidator(groupsSelector)) return;
 
-    const res = await JSON.parse(await Request("GET", url, "application/x-www-form-urlencoded"));
+    if(!EmailValidator(email.value)) return;
 
-    if(!res || res.exception || res.users.length === 0) return null;
+    interactable(false);
 
-    return res.users[0];
+    const job = document.querySelector('input[name="job"]:checked').value;
+
+    const res = await EnrolUser(email.value, coursesSelector.value, groupsSelector.value, job);
+
+    coursesSelector.value = "";
+    groupsSelector.innerHTML = `
+    <option value="" selected disabled hidden>Choose Group</option>
+    <option value="" disabled>--Empty--</option>
+    `;
+    email.value = "";
+
+    interactable();
 }
 
 async function GetCourses(){
 
-    let url = `http://learn.fajr.com/webservice/rest/server.php?wstoken=3a4b8aba0773629cbb10ab3926ef80f0&wsfunction=core_course_get_courses&moodlewsrestformat=json`;
+    const res = await JSON.parse(await Request("GET", "/api/get-courses", "application/json"));
+    
+    if(!res){
 
-    for(let i = 1; i <= 100; i++){
-
-        if(i === 68 || i === 82 || i === 97) continue;
-        url += `&options[ids][${i - 1}]=${i}`;
-    }
-
-    const res = await JSON.parse(await Request("GET", url, "application/x-www-form-urlencoded"));
-
-    return res;
-}
-
-async function GetGroups(courseID){
-
-    const res = await JSON.parse(await Request("post", "/api/get-course-groups", "application/json", {
-        courseID,
-    }));
-
-    if(!res) {
-        console.log("Error");
+        Alert("There is a Error, Try Again.", true);
 
         return null;
     }
 
     if(!res.success){
-        console.log(res.message);
+
+        Alert(res.message, true);
 
         return null;
     }
@@ -88,13 +104,130 @@ async function GetGroups(courseID){
     return res.data;
 }
 
-async function EnrolUser(userID, courseID, isTeacher = false){
+async function GetGroups(courseID){
 
-    console.log(userID, courseID, isTeacher);
+    const res = await JSON.parse(await Request("POST", "/api/get-course-groups", "application/json", {
+        courseID,
+    }));
 
-    let url = `http://learn.fajr.com/webservice/rest/server.php?wstoken=3a4b8aba0773629cbb10ab3926ef80f0&wsfunction=enrol_manual_enrol_users&moodlewsrestformat=json&courseid=${courseID}&userid=${userID}&roleid=5`;
+    if(!res) {
 
-    const res = await JSON.parse(await Request("POST", url, "application/x-www-form-urlencoded"));
-    console.log(res);
-    return res;
+        Alert("There is a Error, Try Again.", true);
+
+        return null;
+    }
+
+    if(!res.success){
+
+        Alert(res.message, true);
+
+        return null;
+    }
+
+    return res.data;
+}
+
+async function EnrolUser(email, courseID, groupID, job){
+
+    const data = {
+        email,
+        courseID,
+        groupID,
+        job,
+    }
+
+    const res = await JSON.parse(await Request("POST", "/api/enroluser", "application/json", data));
+    
+    if(!res){
+
+        Alert(res.message, true);
+
+        return false;
+    }
+
+    if(!res.success){
+
+        Alert(res.message, true);
+
+        return false;
+    }
+
+    Alert(res.message);
+
+    return true;
+}
+
+function CourseValidator(select){
+
+    if(select.value === ""){
+
+        Alert("Course Select Shouldn't be Empty Value.", true);
+
+        return false;
+    }
+
+    return true;
+}
+
+function GroupValidator(select){
+
+    if(select.value === ""){
+
+        Alert("Group Select Shouldn't be Empty Value.", true);
+
+        return false;
+    }
+
+    return true;
+}
+
+function EmailValidator(email){
+
+    const emailRegex = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+
+    if(!emailRegex.test(email)){
+
+        Alert("Invalid E-mail, is't a Mail Format.", true);
+
+        return false;
+    }
+
+    if(/[A-Z]/.test(email)){
+        console.log("yes2");
+        Alert("Invalid E-mail, E-Mail shouldn't Include Capital Letters.", true);
+        return false;
+    }
+    
+    return true;
+}
+
+function Alert(message, isError = false){
+
+    alert.children[0].innerText = message;
+
+    if(isError){
+        alert.classList.remove("main-alert-success");
+        alert.classList.add("main-alert-faild");
+    }
+    else{
+        alert.classList.remove("main-alert-faild");
+        alert.classList.add("main-alert-success")
+    }
+
+    alert.style.display = "block";
+}
+
+function RemoveAlert(){
+
+    alert.classList.remove("main-alert-success");
+    alert.classList.remove("main-alert-faild");
+
+    alert.style.display = "none";
+}
+
+function interactable(state = true){
+
+    canSubmit = state;
+
+    submitBTN.disabled = !state;
 }

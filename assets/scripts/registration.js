@@ -92,7 +92,7 @@ submitBTN.onclick = async function(){
     submitBTN.classList.remove("normal-btn");
     submitBTN.classList.add("busy-btn");
 
-    const gender = Number(document.querySelector('input[name="gender"]:checked').value);
+    const gender = document.querySelector('input[name="gender"]:checked').value;
 
     const newUser = await JSON.parse(await Register(username.value, firstName.value, lastName.value, email.value, password.value, rPassword.value, gender));
 

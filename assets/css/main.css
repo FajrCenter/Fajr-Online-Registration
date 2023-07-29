@@ -89,6 +89,7 @@ footer{
 }
 
 form{
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -101,9 +102,10 @@ form > h1{
 
 form > .selectors{
     width: 100%;
+    margin: 20px;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
 }
 
 form > .selectors > select{
@@ -156,18 +158,18 @@ form > .input > input{
     border-radius: 4px;
 }
 
-form > .gender-input{
+form > .radio-input{
     display: flex;
     align-items: center;
     justify-content: center;
     margin: 10px 0;
 }
 
-form > .gender-input > .input{
+form > .radio-input > .input{
     margin: 3px 10px;
 }
 
-form > .gender-input > .input label{
+form > .radio-input > .input label{
     font-size: 14px;
     font-weight: 600;
 }
@@ -187,12 +189,19 @@ form > button{
     transition: 0.2s all;
 }
 
+form > button:disabled{
+    border: 1px solid #999999;
+    background-color: #cccccc;
+    color: #666666;
+    cursor: progress;
+}
+
 .normal-btn{
     background-color: #44bd32;
     cursor: pointer;
     color: white;
 }
-.normal-btn:hover{
+.normal-btn:hover:enabled{
     background-color: #4cd137;
 }
 
@@ -203,6 +212,7 @@ form > button{
 }
 
 #main-alert{
+    display: none;
     padding: 5px;
     margin: 0;
     width: 100%;
