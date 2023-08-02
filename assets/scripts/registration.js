@@ -85,6 +85,9 @@ submitBTN.onclick = async function(){
 
     if(!canSubmit) return;
 
+    mainAlert.children[0].innerText = "";
+    mainAlert.style.display = "none";
+
     canSubmit = false;
     submitBTN.disabled = true;
 
@@ -108,9 +111,17 @@ submitBTN.onclick = async function(){
     if(!newUser.success){
         mainAlert.classList.add("main-alert-faild");
         mainAlert.children[0].innerText = newUser.message;
+        mainAlert.style.display = "block";
 
         return;
     }
+
+    username.value = "";
+    firstName.value = "";
+    lastName.value = "";
+    email.value = "";
+    password.value = "";
+    rPassword.value = "";
 
     window.location.href = "http://learn.fajr.com/login";
 }
