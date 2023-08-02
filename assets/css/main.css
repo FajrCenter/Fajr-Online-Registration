@@ -21,8 +21,9 @@ body, html{
 }
 
 .admin-login{
-    width: 100%;
+    width: 40%;
     height: 100vh;
+    margin: auto;
     display: flex;
     align-items: center;
     justify-content: center;

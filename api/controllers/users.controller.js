@@ -1,5 +1,4 @@
 import axios from "axios";
-import bcrypt from "bcrypt";
 
 /* Create Users Controller */
 
